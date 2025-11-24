@@ -150,21 +150,6 @@ const BeforeAfterReelsTool = ({
       ctx.translate(offset, 0);
       drawImage(ctx, showBefore ? afterImg : beforeImg, glitchIntensity);
       ctx.restore();
-
-      // Add horizontal glitch lines
-      if (Math.random() < glitchIntensity) {
-        const lineY = Math.random() * CANVAS_HEIGHT;
-        const lineHeight = Math.random() * 50 + 10;
-        const lineOffset = (Math.random() - 0.5) * offset * 2;
-        
-        ctx.save();
-        ctx.drawImage(
-          ctx.canvas,
-          lineOffset, lineY, CANVAS_WIDTH, lineHeight,
-          0, lineY, CANVAS_WIDTH, lineHeight
-        );
-        ctx.restore();
-      }
     }
   };
 
@@ -184,9 +169,9 @@ const BeforeAfterReelsTool = ({
     const burnProgress = t;
     const burnRadius = Math.sqrt(CANVAS_WIDTH ** 2 + CANVAS_HEIGHT ** 2) * burnProgress;
 
-    // Create radial burn effect
-    const centerX = CANVAS_WIDTH / 2 + (Math.random() - 0.5) * 100 * intensity;
-    const centerY = CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 100 * intensity;
+    // Use deterministic center position based on intensity
+    const centerX = CANVAS_WIDTH / 2 + Math.sin(intensity * Math.PI) * 50 * intensity;
+    const centerY = CANVAS_HEIGHT / 2 + Math.cos(intensity * Math.PI) * 50 * intensity;
 
     // Draw burning glow
     const gradient = ctx.createRadialGradient(
@@ -371,7 +356,7 @@ const BeforeAfterReelsTool = ({
     } else {
       setIsPlaying(false);
     }
-  }, [duration, selectedEffect]);
+  }, [duration, selectedEffect, intensity]);
 
   // Play animation
   const playAnimation = () => {
