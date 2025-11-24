@@ -15,12 +15,51 @@ No installation needed - just open the link and start creating reels!
 
 ## 🎬 Features
 
-- **Multiple Transition Effects**: 5 built-in professional effects
+- **50 Transition Effects**: Maximum collection of professional transition effects
   - 🔍 **Shock Zoom**: Dynamic zoom in/out transition
   - 🌈 **RGB Glitch**: Digital glitch effect with RGB channel separation
   - 🔥 **Film Burn**: Cinematic burn-through transition
   - ✨ **Particle Burst**: Explosive particle animation
   - 👉 **Wipe Reveal**: Smooth directional wipe with edge effects
+  - ⬇️ **Vertical Wipe**: Top-to-bottom wipe transition
+  - ⭕ **Circular Reveal**: Expanding circle reveal
+  - 🔎 **Zoom In/Out**: Scale-based transitions
+  - ⬅️ **Slide Transitions**: Left, Right, Up, Down sliding
+  - 🌫️ **Fade Cross**: Classic crossfade effect
+  - 🌀 **Spin Effects**: Clockwise and counter-clockwise rotation
+  - 📐 **Diagonal Wipe**: Corner-to-corner transition
+  - 📦 **Box Expand**: Center-expanding box reveal
+  - 🎨 **Pixelate**: Mosaic pixelation effect
+  - 🌊 **Blur Transition**: Smooth blur-based fade
+  - 〰️ **Wave Distortion**: Wavy distortion effect
+  - 💧 **Ripple**: Water ripple effect
+  - ✂️ **Split Effects**: Horizontal and vertical splits
+  - 🔄 **Flip Effects**: Horizontal and vertical flips
+  - ▦ **Checkerboard**: Grid-based checkerboard reveal
+  - 🎲 **Random Blocks**: Randomized block transition
+  - 🎭 **Venetian Blinds**: Classic blinds effect
+  - 🌪️ **Swirl**: Spiral rotation transition
+  - 💎 **Diamond Reveal**: Diamond-shaped reveal
+  - 🏀 **Bounce In**: Bouncy entrance animation
+  - 🎈 **Elastic**: Elastic easing transition
+  - 📄 **Page Curl**: Realistic page curl effect
+  - 🔮 **Kaleidoscope**: Kaleidoscopic mirror effect
+  - 🎨 **Color Shift**: Hue rotation transition
+  - 🌅 **Gradient Wipe**: Gradient-based wipe
+  - 💫 **Zoom Blur**: Motion blur zoom effect
+  - 💥 **Shatter**: Glass shatter effect
+  - 🎯 **Radial Wipe**: Clock-wise radial wipe
+  - 🚪 **Door Swing**: 3D door swing effect
+  - 🌀 **Twist**: Twisting distortion
+  - 📋 **Fold**: Paper fold effect
+  - ⭐ **Star Burst**: Starburst particle effect
+  - 🌊 **Liquid**: Liquid wave distortion
+  - 🎲 **Cube Rotate**: 3D cube rotation
+  - 🔮 **Morph**: Morphing scale effect
+  - 🔳 **Grid Flip**: Grid-based flip animation
+  - 💡 **Spotlight**: Spotlight reveal effect
+  - 🌀 **Vortex**: Vortex spiral effect
+  - And many more creative transitions!
 
 - **Canvas Rendering**: High-quality 1080×1920 vertical format (9:16 aspect ratio)
 - **Smooth Animation**: requestAnimationFrame-based smooth playback
