@@ -1,6 +1,17 @@
 # Before/After Reels Tool
 
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://rizwansoaib.github.io/reels/)
+[![GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-blue)](https://rizwansoaib.github.io/reels/)
+[![No Build Required](https://img.shields.io/badge/build-none-success)]()
+[![Self Contained](https://img.shields.io/badge/dependencies-none-green)]()
+
 A powerful, self-contained React component for creating stunning animated transitions between BEFORE and AFTER images with professional visual effects. Fully responsive and optimized for mobile recording.
+
+## 🎯 Live Demo
+
+**Try it now**: [https://rizwansoaib.github.io/reels/](https://rizwansoaib.github.io/reels/)
+
+No installation needed - just open the link and start creating reels!
 
 ## 🎬 Features
 
@@ -234,6 +245,20 @@ The component uses Tailwind CSS classes. Modify the className strings to customi
 ## 📄 License
 
 This component is provided as-is for use in any project.
+
+## 🌐 Deployment
+
+This application is automatically deployed to GitHub Pages. See [DEPLOY.md](DEPLOY.md) for:
+- Live demo link
+- Deployment to other platforms (Netlify, Vercel, Cloudflare Pages, Firebase)
+- Local testing instructions
+- Troubleshooting tips
+
+**Quick Deploy Options:**
+- GitHub Pages: Already configured with GitHub Actions
+- Netlify: [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/rizwansoaib/reels)
+- Vercel: Connect repository and deploy
+- Or simply open `index.html` in any browser!
 
 ## 🤝 Contributing
 
