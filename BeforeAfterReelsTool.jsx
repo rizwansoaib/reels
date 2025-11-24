@@ -1080,9 +1080,14 @@ const BeforeAfterReelsTool = ({
       const w = CANVAS_WIDTH / 5;
       const h = CANVAS_HEIGHT / 4;
       
-      const offsetX = (Math.random() - 0.5) * 200 * t * intensity;
-      const offsetY = (Math.random() - 0.5) * 200 * t * intensity;
-      const rotation = (Math.random() - 0.5) * Math.PI * t;
+      // Use deterministic pseudo-random based on piece index
+      const seedX = Math.sin(i * 12.9898) * 0.5;
+      const seedY = Math.sin(i * 78.233) * 0.5;
+      const seedRot = Math.sin(i * 43758.5453) * 0.5;
+      
+      const offsetX = seedX * 200 * t * intensity;
+      const offsetY = seedY * 200 * t * intensity;
+      const rotation = seedRot * Math.PI * t;
       
       ctx.save();
       ctx.translate(x + w / 2 + offsetX, y + h / 2 + offsetY);
