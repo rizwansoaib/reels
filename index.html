@@ -56,6 +56,7 @@
       const beforeImageRef = useRef(null);
       const afterImageRef = useRef(null);
       const animationFrameRef = useRef(null);
+      const audioContextRef = useRef(null);
 
       const [beforeImage, setBeforeImage] = useState(null);
       const [afterImage, setAfterImage] = useState(null);
@@ -64,9 +65,112 @@
       const [duration, setDuration] = useState(defaultDuration);
       const [intensity, setIntensity] = useState(defaultIntensity);
       const [progress, setProgress] = useState(0);
+      const [soundEnabled, setSoundEnabled] = useState(true);
+      const [volume, setVolume] = useState(0.5);
+      const [engagementMode, setEngagementMode] = useState(true);
+      const [showAchievement, setShowAchievement] = useState(false);
+      const [remainingTime, setRemainingTime] = useState(0);
 
       const CANVAS_WIDTH = 1080;
       const CANVAS_HEIGHT = 1920;
+
+      // Web Audio API - Sound Effects System
+      const initAudioContext = () => {
+        if (!audioContextRef.current) {
+          try {
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          } catch (e) {
+            console.warn('Web Audio API not supported:', e);
+            return null;
+          }
+        }
+        return audioContextRef.current;
+      };
+
+      const playSound = (type) => {
+        if (!soundEnabled) return;
+        try {
+          const ctx = initAudioContext();
+          if (!ctx) return;
+          
+          const oscillator = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          gainNode.gain.value = volume * 0.3;
+
+          switch(type) {
+            case 'swoosh':
+              oscillator.type = 'sine';
+              oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+              oscillator.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+              oscillator.start(ctx.currentTime);
+              oscillator.stop(ctx.currentTime + 0.3);
+              break;
+            case 'impact':
+              oscillator.type = 'square';
+              oscillator.frequency.setValueAtTime(150, ctx.currentTime);
+              oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.2);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+              oscillator.start(ctx.currentTime);
+              oscillator.stop(ctx.currentTime + 0.2);
+              break;
+            case 'achievement':
+              const frequencies = [523.25, 659.25, 783.99, 1046.50];
+              frequencies.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = volume * 0.2;
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5 + i * 0.1);
+                osc.start(ctx.currentTime + i * 0.1);
+                osc.stop(ctx.currentTime + 0.5 + i * 0.1);
+              });
+              break;
+            case 'buildup':
+              oscillator.type = 'sawtooth';
+              oscillator.frequency.setValueAtTime(100, ctx.currentTime);
+              oscillator.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.5);
+            gainNode.gain.value = volume * 0.1;
+            gainNode.gain.exponentialRampToValueAtTime(volume * 0.3, ctx.currentTime + 0.4);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.5);
+            break;
+          }
+        } catch (e) {
+          console.warn('Sound playback failed:', e);
+        }
+      };
+
+      // Psychological Engagement Easing Function
+      const engagementEasing = (t) => {
+        if (!engagementMode) return t;
+        
+        // Phase 1: Slow anticipation buildup (0-30%)
+        if (t < 0.3) {
+          return t * 0.5; // Slower progress creates anticipation
+        }
+        // Phase 2: Curiosity delay (30-50%) - slightly faster
+        if (t < 0.5) {
+          return 0.15 + (t - 0.3) * 0.8;
+        }
+        // Phase 3: Accelerating toward suspense (50-85%)
+        if (t < 0.85) {
+          return 0.31 + (t - 0.5) * 1.5;
+        }
+        // Phase 4: Suspense hold (85-95%) - dramatic pause
+        if (t < 0.95) {
+          return 0.835 + (t - 0.85) * 0.5; // Very slow at this point
+        }
+        // Phase 5: Sudden reveal (95-100%)
+        return 0.885 + (t - 0.95) * 2.3; // Fast finish
+      };
 
       // Load image from file
       const loadImage = (file) => {
@@ -1366,6 +1470,879 @@
     drawImage(ctx, afterImg, t);
   };
 
+  // Effect 51: Spiral In
+  const applySpiralIn = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1 - t);
+    ctx.save();
+    ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.rotate(t * Math.PI * 4);
+    ctx.scale(t, t);
+    ctx.translate(-CANVAS_WIDTH / 2, -CANVAS_HEIGHT / 2);
+    drawImage(ctx, afterImg, t);
+    ctx.restore();
+  };
+
+  // Effect 52: Spiral Out
+  const applySpiralOut = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, t);
+    ctx.save();
+    ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.rotate((1 - t) * Math.PI * 4);
+    ctx.scale(1 - t, 1 - t);
+    ctx.translate(-CANVAS_WIDTH / 2, -CANVAS_HEIGHT / 2);
+    drawImage(ctx, beforeImg, 1 - t);
+    ctx.restore();
+  };
+
+  // Effect 53: Clock Wipe
+  const applyClockWipe = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.arc(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, Math.max(CANVAS_WIDTH, CANVAS_HEIGHT), -Math.PI / 2, -Math.PI / 2 + t * Math.PI * 2, false);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 54: Heart Reveal
+  const applyHeartReveal = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const size = t * CANVAS_WIDTH * 0.8;
+    ctx.save();
+    ctx.beginPath();
+    const cx = CANVAS_WIDTH / 2;
+    const cy = CANVAS_HEIGHT / 2;
+    ctx.moveTo(cx, cy + size * 0.3);
+    ctx.bezierCurveTo(cx - size * 0.5, cy - size * 0.3, cx - size * 0.5, cy - size * 0.6, cx, cy - size * 0.3);
+    ctx.bezierCurveTo(cx + size * 0.5, cy - size * 0.6, cx + size * 0.5, cy - size * 0.3, cx, cy + size * 0.3);
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 55: Star Wipe
+  const applyStarWipe = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const radius = t * Math.max(CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+    ctx.beginPath();
+    ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? radius : radius * 0.5;
+      const angle = (i * Math.PI) / 5 - Math.PI / 2;
+      if (i === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+      else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+    }
+    ctx.closePath();
+    ctx.translate(-CANVAS_WIDTH / 2, -CANVAS_HEIGHT / 2);
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 56: Blinds Vertical
+  const applyBlindsVertical = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const blindCount = 15;
+    const blindWidth = CANVAS_WIDTH / blindCount;
+    for (let i = 0; i < blindCount; i++) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(i * blindWidth, 0, blindWidth * t, CANVAS_HEIGHT);
+      ctx.clip();
+      drawImage(ctx, afterImg, 1);
+      ctx.restore();
+    }
+  };
+
+  // Effect 57: Cross Dissolve
+  const applyCrossDissolve = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    drawImage(ctx, beforeImg, 1 - ease);
+    drawImage(ctx, afterImg, ease);
+  };
+
+  // Effect 58: Noise Dissolve
+  const applyNoiseDissolve = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const blockSize = 20;
+    for (let x = 0; x < CANVAS_WIDTH; x += blockSize) {
+      for (let y = 0; y < CANVAS_HEIGHT; y += blockSize) {
+        const noise = (Math.sin(x * 12.9898 + y * 78.233) + 1) / 2;
+        if (noise < t) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(x, y, blockSize, blockSize);
+          ctx.clip();
+          drawImage(ctx, afterImg, 1);
+          ctx.restore();
+        }
+      }
+    }
+  };
+
+  // Effect 59: Zoom Rotate
+  const applyZoomRotate = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+    ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.rotate(t * Math.PI * 2);
+    ctx.scale(1 + t * intensity, 1 + t * intensity);
+    ctx.translate(-CANVAS_WIDTH / 2, -CANVAS_HEIGHT / 2);
+    drawImage(ctx, beforeImg, 1 - t);
+    ctx.restore();
+    drawImage(ctx, afterImg, t);
+  };
+
+  // Effect 60: Push Left
+  const applyPushLeft = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+    ctx.translate(-t * CANVAS_WIDTH, 0);
+    drawImage(ctx, beforeImg, 1);
+    ctx.translate(CANVAS_WIDTH, 0);
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 61: Push Right
+  const applyPushRight = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+    ctx.translate(t * CANVAS_WIDTH, 0);
+    drawImage(ctx, beforeImg, 1);
+    ctx.translate(-CANVAS_WIDTH, 0);
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 62: Push Up
+  const applyPushUp = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+    ctx.translate(0, -t * CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.translate(0, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 63: Push Down
+  const applyPushDown = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+    ctx.translate(0, t * CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.translate(0, -CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 64: Cover Left
+  const applyCoverLeft = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.translate(CANVAS_WIDTH * (1 - t), 0);
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 65: Cover Right
+  const applyCoverRight = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.translate(-CANVAS_WIDTH * (1 - t), 0);
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 66: Iris Open
+  const applyIrisOpen = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const maxR = Math.sqrt(CANVAS_WIDTH ** 2 + CANVAS_HEIGHT ** 2) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, t * maxR, 0, Math.PI * 2);
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 67: Iris Close
+  const applyIrisClose = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    const maxR = Math.sqrt(CANVAS_WIDTH ** 2 + CANVAS_HEIGHT ** 2) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, (1 - t) * maxR, 0, Math.PI * 2);
+    ctx.clip();
+    drawImage(ctx, beforeImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 68: Squeeze Horizontal
+  const applySqueezeHorizontal = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    ctx.save();
+    ctx.translate(CANVAS_WIDTH / 2, 0);
+    ctx.scale(1 - t, 1);
+    ctx.translate(-CANVAS_WIDTH / 2, 0);
+    drawImage(ctx, beforeImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 69: Squeeze Vertical
+  const applySqueezeVertical = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    ctx.save();
+    ctx.translate(0, CANVAS_HEIGHT / 2);
+    ctx.scale(1, 1 - t);
+    ctx.translate(0, -CANVAS_HEIGHT / 2);
+    drawImage(ctx, beforeImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 70: Stretch Horizontal
+  const applyStretchHorizontal = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1 - t);
+    ctx.save();
+    ctx.translate(CANVAS_WIDTH / 2, 0);
+    ctx.scale(t, 1);
+    ctx.translate(-CANVAS_WIDTH / 2, 0);
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 71: Barn Doors Open
+  const applyBarnDoorsOpen = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, CANVAS_WIDTH / 2 * (1 - t), CANVAS_HEIGHT);
+    ctx.rect(CANVAS_WIDTH - CANVAS_WIDTH / 2 * (1 - t), 0, CANVAS_WIDTH / 2 * (1 - t), CANVAS_HEIGHT);
+    ctx.clip();
+    drawImage(ctx, beforeImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 72: Barn Doors Close
+  const applyBarnDoorsClose = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, CANVAS_WIDTH / 2 * t, CANVAS_HEIGHT);
+    ctx.rect(CANVAS_WIDTH - CANVAS_WIDTH / 2 * t, 0, CANVAS_WIDTH / 2 * t, CANVAS_HEIGHT);
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 73: Mosaic
+  const applyMosaic = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const tileSize = 80;
+    for (let x = 0; x < CANVAS_WIDTH; x += tileSize) {
+      for (let y = 0; y < CANVAS_HEIGHT; y += tileSize) {
+        const tileT = ((x + y) / (CANVAS_WIDTH + CANVAS_HEIGHT));
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, tileSize, tileSize);
+        ctx.clip();
+        if (tileT < t) {
+          drawImage(ctx, afterImg, 1);
+        } else {
+          drawImage(ctx, beforeImg, 1);
+        }
+        ctx.restore();
+      }
+    }
+  };
+
+  // Effect 74: Dissolve Pixels
+  const applyDissolvePixels = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    const pixelSize = 10;
+    for (let x = 0; x < CANVAS_WIDTH; x += pixelSize) {
+      for (let y = 0; y < CANVAS_HEIGHT; y += pixelSize) {
+        const rand = (Math.sin(x * 0.1 + y * 0.1) + 1) / 2;
+        if (rand > t) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(x, y, pixelSize, pixelSize);
+          ctx.clip();
+          drawImage(ctx, beforeImg, 1);
+          ctx.restore();
+        }
+      }
+    }
+  };
+
+  // Effect 75: Glitch Blocks
+  const applyGlitchBlocks = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, t < 0.5 ? beforeImg : afterImg, 1);
+    const glitchIntensity = Math.sin(t * Math.PI) * intensity;
+    if (glitchIntensity > 0.1) {
+      for (let i = 0; i < 10; i++) {
+        const y = Math.floor((Math.sin(i * 100) + 1) / 2 * CANVAS_HEIGHT);
+        const h = 20 + Math.floor((Math.sin(i * 50) + 1) / 2 * 50);
+        const offset = (Math.sin(i * 200) * 50) * glitchIntensity;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, y, CANVAS_WIDTH, h);
+        ctx.clip();
+        ctx.translate(offset, 0);
+        drawImage(ctx, t < 0.5 ? afterImg : beforeImg, glitchIntensity);
+        ctx.restore();
+      }
+    }
+  };
+
+  // Effect 76: Flash White
+  const applyFlashWhite = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if (t < 0.4) {
+      drawImage(ctx, beforeImg, 1);
+    } else if (t < 0.6) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${(t - 0.4) * 5})`;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    } else {
+      drawImage(ctx, afterImg, 1);
+      ctx.fillStyle = `rgba(255, 255, 255, ${(1 - t) * 2.5})`;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
+  };
+
+  // Effect 77: Flash Black
+  const applyFlashBlack = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if (t < 0.4) {
+      drawImage(ctx, beforeImg, 1);
+      ctx.fillStyle = `rgba(0, 0, 0, ${t * 2.5})`;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    } else if (t < 0.6) {
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    } else {
+      drawImage(ctx, afterImg, 1);
+      ctx.fillStyle = `rgba(0, 0, 0, ${(1 - t) * 2.5})`;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
+  };
+
+  // Effect 78: Radial Blur
+  const applyRadialBlur = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const layers = 8;
+    for (let i = 0; i < layers; i++) {
+      const scale = 1 + (i / layers) * 0.1 * Math.sin(t * Math.PI);
+      ctx.save();
+      ctx.globalAlpha = 1 / layers;
+      ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-CANVAS_WIDTH / 2, -CANVAS_HEIGHT / 2);
+      drawImage(ctx, t < 0.5 ? beforeImg : afterImg, 1);
+      ctx.restore();
+    }
+  };
+
+  // Effect 79: Curtain Left
+  const applyCurtainLeft = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    for (let i = 0; i < 10; i++) {
+      const foldWidth = CANVAS_WIDTH / 10;
+      const x = i * foldWidth;
+      const foldT = Math.max(0, Math.min(1, (t - i * 0.05) * 2));
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, 0, foldWidth * (1 - foldT), CANVAS_HEIGHT);
+      ctx.clip();
+      drawImage(ctx, beforeImg, 1);
+      ctx.restore();
+    }
+  };
+
+  // Effect 80: Curtain Right
+  const applyCurtainRight = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, 1);
+    for (let i = 9; i >= 0; i--) {
+      const foldWidth = CANVAS_WIDTH / 10;
+      const x = i * foldWidth;
+      const foldT = Math.max(0, Math.min(1, (t - (9 - i) * 0.05) * 2));
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + foldWidth * foldT, 0, foldWidth * (1 - foldT), CANVAS_HEIGHT);
+      ctx.clip();
+      drawImage(ctx, beforeImg, 1);
+      ctx.restore();
+    }
+  };
+
+  // Effect 81: Cross Zoom
+  const applyCrossZoom = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const zoom = 1 + Math.sin(t * Math.PI) * 0.5;
+    ctx.save();
+    ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-CANVAS_WIDTH / 2, -CANVAS_HEIGHT / 2);
+    drawImage(ctx, beforeImg, 1 - t);
+    drawImage(ctx, afterImg, t);
+    ctx.restore();
+  };
+
+  // Effect 82: Dreamy
+  const applyDreamy = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const blur = Math.sin(t * Math.PI) * 15;
+    ctx.filter = `blur(${blur}px) brightness(${1 + Math.sin(t * Math.PI) * 0.2})`;
+    drawImage(ctx, beforeImg, 1 - t);
+    drawImage(ctx, afterImg, t);
+    ctx.filter = 'none';
+  };
+
+  // Effect 83: Wind Left
+  const applyWindLeft = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, t);
+    const slices = 30;
+    for (let i = 0; i < slices; i++) {
+      const sliceH = CANVAS_HEIGHT / slices;
+      const offset = Math.sin(i * 0.5 + t * 10) * 20 + t * CANVAS_WIDTH;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, i * sliceH, CANVAS_WIDTH, sliceH);
+      ctx.clip();
+      ctx.translate(-offset, 0);
+      drawImage(ctx, beforeImg, 1 - t);
+      ctx.restore();
+    }
+  };
+
+  // Effect 84: Wind Right
+  const applyWindRight = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, afterImg, t);
+    const slices = 30;
+    for (let i = 0; i < slices; i++) {
+      const sliceH = CANVAS_HEIGHT / slices;
+      const offset = Math.sin(i * 0.5 + t * 10) * 20 + t * CANVAS_WIDTH;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, i * sliceH, CANVAS_WIDTH, sliceH);
+      ctx.clip();
+      ctx.translate(offset, 0);
+      drawImage(ctx, beforeImg, 1 - t);
+      ctx.restore();
+    }
+  };
+
+  // Effect 85: Reveal Up
+  const applyRevealUp = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, CANVAS_HEIGHT * (1 - t), CANVAS_WIDTH, CANVAS_HEIGHT * t);
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 86: Reveal Down
+  const applyRevealDown = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT * t);
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 87: Corner Reveal
+  const applyCornerReveal = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(CANVAS_WIDTH * t * 2, 0);
+    ctx.lineTo(0, CANVAS_HEIGHT * t * 2);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 88: Pinwheel
+  const applyPinwheel = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const blades = 6;
+    for (let i = 0; i < blades; i++) {
+      const angle = (i / blades) * Math.PI * 2 + t * Math.PI;
+      const sweepAngle = t * (Math.PI * 2 / blades);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.arc(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, Math.max(CANVAS_WIDTH, CANVAS_HEIGHT), angle, angle + sweepAngle);
+      ctx.closePath();
+      ctx.clip();
+      drawImage(ctx, afterImg, 1);
+      ctx.restore();
+    }
+  };
+
+  // Effect 89: Wedge
+  const applyWedge = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.arc(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, Math.max(CANVAS_WIDTH, CANVAS_HEIGHT), -Math.PI / 2 - t * Math.PI, -Math.PI / 2 + t * Math.PI);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 90: Bow Tie
+  const applyBowTie = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const w = CANVAS_WIDTH * t / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(CANVAS_WIDTH / 2, 0);
+    ctx.lineTo(CANVAS_WIDTH / 2 - w, CANVAS_HEIGHT / 2);
+    ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
+    ctx.lineTo(CANVAS_WIDTH / 2 + w, CANVAS_HEIGHT / 2);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 91: Zigzag Horizontal
+  const applyZigzagHorizontal = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const teeth = 10;
+    const toothH = CANVAS_HEIGHT / teeth;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    for (let i = 0; i <= teeth; i++) {
+      const x = i % 2 === 0 ? CANVAS_WIDTH * t : CANVAS_WIDTH * t - 50;
+      ctx.lineTo(x, i * toothH);
+    }
+    ctx.lineTo(0, CANVAS_HEIGHT);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 92: Zigzag Vertical
+  const applyZigzagVertical = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    const teeth = 15;
+    const toothW = CANVAS_WIDTH / teeth;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    for (let i = 0; i <= teeth; i++) {
+      const y = i % 2 === 0 ? CANVAS_HEIGHT * t : CANVAS_HEIGHT * t - 50;
+      ctx.lineTo(i * toothW, y);
+    }
+    ctx.lineTo(CANVAS_WIDTH, 0);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 93: Wipe Diagonal TL
+  const applyWipeDiagonalTL = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    const d = (CANVAS_WIDTH + CANVAS_HEIGHT) * t;
+    ctx.moveTo(0, 0);
+    ctx.lineTo(d, 0);
+    ctx.lineTo(0, d);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 94: Wipe Diagonal BR
+  const applyWipeDiagonalBR = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1);
+    ctx.save();
+    ctx.beginPath();
+    const d = (CANVAS_WIDTH + CANVAS_HEIGHT) * t;
+    ctx.moveTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.lineTo(CANVAS_WIDTH - d, CANVAS_HEIGHT);
+    ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT - d);
+    ctx.closePath();
+    ctx.clip();
+    drawImage(ctx, afterImg, 1);
+    ctx.restore();
+  };
+
+  // Effect 95: Matrix Rain
+  const applyMatrixRain = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, t < 0.5 ? beforeImg : afterImg, 1);
+    ctx.fillStyle = `rgba(0, ${150 + Math.sin(t * Math.PI) * 100}, 0, ${Math.sin(t * Math.PI) * 0.3})`;
+    for (let i = 0; i < 50; i++) {
+      const x = (Math.sin(i * 100) + 1) / 2 * CANVAS_WIDTH;
+      const y = ((t * 2 + i * 0.1) % 1) * CANVAS_HEIGHT;
+      ctx.fillRect(x, y, 3, 30);
+    }
+  };
+
+  // Effect 96: Scanlines
+  const applyScanlines = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, beforeImg, 1 - t);
+    drawImage(ctx, afterImg, t);
+    ctx.fillStyle = `rgba(0, 0, 0, ${Math.sin(t * Math.PI) * 0.3})`;
+    for (let y = 0; y < CANVAS_HEIGHT; y += 4) {
+      ctx.fillRect(0, y, CANVAS_WIDTH, 2);
+    }
+  };
+
+  // Effect 97: Old Film
+  const applyOldFilm = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.filter = `sepia(${Math.sin(t * Math.PI) * 0.5}) contrast(${1 + Math.sin(t * Math.PI) * 0.2})`;
+    drawImage(ctx, beforeImg, 1 - t);
+    drawImage(ctx, afterImg, t);
+    ctx.filter = 'none';
+    ctx.fillStyle = `rgba(139, 90, 43, ${Math.sin(t * Math.PI) * 0.2})`;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  };
+
+  // Effect 98: VHS
+  const applyVHS = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    drawImage(ctx, t < 0.5 ? beforeImg : afterImg, 1);
+    const noiseIntensity = Math.sin(t * Math.PI) * intensity;
+    if (noiseIntensity > 0.1) {
+      for (let i = 0; i < 5; i++) {
+        const y = Math.floor((Math.sin(i * 50 + t * 100) + 1) / 2 * CANVAS_HEIGHT);
+        ctx.fillStyle = `rgba(255, 255, 255, ${noiseIntensity * 0.5})`;
+        ctx.fillRect(0, y, CANVAS_WIDTH, 3);
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.translate(noiseIntensity * 10, 0);
+      drawImage(ctx, t < 0.5 ? beforeImg : afterImg, noiseIntensity * 0.3);
+      ctx.restore();
+    }
+  };
+
+  // Effect 99: Thermal
+  const applyThermal = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const hue = Math.sin(t * Math.PI) * 60;
+    ctx.filter = `hue-rotate(${hue}deg) saturate(${1 + Math.sin(t * Math.PI) * 2})`;
+    drawImage(ctx, beforeImg, 1 - t);
+    drawImage(ctx, afterImg, t);
+    ctx.filter = 'none';
+  };
+
+  // Effect 100: Invert Flash
+  const applyInvertFlash = (ctx, t) => {
+    const beforeImg = beforeImageRef.current;
+    const afterImg = afterImageRef.current;
+    if (!beforeImg || !afterImg) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const invert = Math.sin(t * Math.PI * 4) > 0 ? 1 : 0;
+    ctx.filter = `invert(${invert})`;
+    drawImage(ctx, t < 0.5 ? beforeImg : afterImg, 1);
+    ctx.filter = 'none';
+  };
+
       const getEffectFunction = () => {
     switch (selectedEffect) {
       case 'shockZoom': return applyShockZoom;
@@ -1418,9 +2395,62 @@
       case 'gridFlip': return applyGridFlip;
       case 'spotlight': return applySpotlight;
       case 'vortex': return applyVortex;
+      case 'spiralIn': return applySpiralIn;
+      case 'spiralOut': return applySpiralOut;
+      case 'clockWipe': return applyClockWipe;
+      case 'heartReveal': return applyHeartReveal;
+      case 'starWipe': return applyStarWipe;
+      case 'blindsVertical': return applyBlindsVertical;
+      case 'crossDissolve': return applyCrossDissolve;
+      case 'noiseDissolve': return applyNoiseDissolve;
+      case 'zoomRotate': return applyZoomRotate;
+      case 'pushLeft': return applyPushLeft;
+      case 'pushRight': return applyPushRight;
+      case 'pushUp': return applyPushUp;
+      case 'pushDown': return applyPushDown;
+      case 'coverLeft': return applyCoverLeft;
+      case 'coverRight': return applyCoverRight;
+      case 'irisOpen': return applyIrisOpen;
+      case 'irisClose': return applyIrisClose;
+      case 'squeezeHorizontal': return applySqueezeHorizontal;
+      case 'squeezeVertical': return applySqueezeVertical;
+      case 'stretchHorizontal': return applyStretchHorizontal;
+      case 'barnDoorsOpen': return applyBarnDoorsOpen;
+      case 'barnDoorsClose': return applyBarnDoorsClose;
+      case 'mosaic': return applyMosaic;
+      case 'dissolvePixels': return applyDissolvePixels;
+      case 'glitchBlocks': return applyGlitchBlocks;
+      case 'flashWhite': return applyFlashWhite;
+      case 'flashBlack': return applyFlashBlack;
+      case 'radialBlur': return applyRadialBlur;
+      case 'curtainLeft': return applyCurtainLeft;
+      case 'curtainRight': return applyCurtainRight;
+      case 'crossZoom': return applyCrossZoom;
+      case 'dreamy': return applyDreamy;
+      case 'windLeft': return applyWindLeft;
+      case 'windRight': return applyWindRight;
+      case 'revealUp': return applyRevealUp;
+      case 'revealDown': return applyRevealDown;
+      case 'cornerReveal': return applyCornerReveal;
+      case 'pinwheel': return applyPinwheel;
+      case 'wedge': return applyWedge;
+      case 'bowTie': return applyBowTie;
+      case 'zigzagHorizontal': return applyZigzagHorizontal;
+      case 'zigzagVertical': return applyZigzagVertical;
+      case 'wipeDiagonalTL': return applyWipeDiagonalTL;
+      case 'wipeDiagonalBR': return applyWipeDiagonalBR;
+      case 'matrixRain': return applyMatrixRain;
+      case 'scanlines': return applyScanlines;
+      case 'oldFilm': return applyOldFilm;
+      case 'vhs': return applyVHS;
+      case 'thermal': return applyThermal;
+      case 'invertFlash': return applyInvertFlash;
       default: return applyShockZoom;
     }
   };
+
+      // Sound effect triggers tracking
+      const soundTriggersRef = useRef({ buildup: false, swoosh: false, impact: false, achievement: false });
 
       const animate = useCallback((startTime) => {
         const canvas = canvasRef.current;
@@ -1429,19 +2459,46 @@
         const ctx = canvas.getContext('2d');
         const currentTime = Date.now();
         const elapsed = (currentTime - startTime) / 1000;
-        const t = Math.min(elapsed / duration, 1);
+        const rawT = Math.min(elapsed / duration, 1);
+        
+        // Apply psychological engagement easing
+        const t = engagementEasing(rawT);
 
-        setProgress(t);
+        setProgress(rawT);
+        setRemainingTime(Math.max(0, duration - elapsed));
+
+        // Play sounds at key moments
+        if (soundEnabled) {
+          if (rawT > 0.1 && rawT < 0.3 && !soundTriggersRef.current.buildup) {
+            playSound('buildup');
+            soundTriggersRef.current.buildup = true;
+          }
+          if (rawT > 0.4 && rawT < 0.6 && !soundTriggersRef.current.swoosh) {
+            playSound('swoosh');
+            soundTriggersRef.current.swoosh = true;
+          }
+          if (rawT > 0.85 && rawT < 0.95 && !soundTriggersRef.current.impact) {
+            playSound('impact');
+            soundTriggersRef.current.impact = true;
+          }
+        }
 
         const effectFn = getEffectFunction();
         effectFn(ctx, t);
 
-        if (t < 1) {
+        if (rawT < 1) {
           animationFrameRef.current = requestAnimationFrame(() => animate(startTime));
         } else {
           setIsPlaying(false);
+          // Achievement animation and sound
+          if (soundEnabled && !soundTriggersRef.current.achievement) {
+            playSound('achievement');
+            soundTriggersRef.current.achievement = true;
+          }
+          setShowAchievement(true);
+          setTimeout(() => setShowAchievement(false), 2000);
         }
-      }, [duration, selectedEffect, intensity]);
+      }, [duration, selectedEffect, intensity, soundEnabled, engagementMode]);
 
       const playAnimation = () => {
         if (!beforeImage || !afterImage) {
@@ -1453,8 +2510,13 @@
           cancelAnimationFrame(animationFrameRef.current);
         }
 
+        // Reset sound triggers
+        soundTriggersRef.current = { buildup: false, swoosh: false, impact: false, achievement: false };
+        setShowAchievement(false);
+
         setIsPlaying(true);
         setProgress(0);
+        setRemainingTime(duration);
         animate(Date.now());
       };
 
@@ -1494,7 +2556,7 @@
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               <div className="lg:col-span-2">
-                <div className="bg-white/10 backdrop-blur-lg rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-2xl">
+                <div className="bg-white/10 backdrop-blur-lg rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-2xl relative">
                   <canvas
                     ref={canvasRef}
                     width={CANVAS_WIDTH}
@@ -1503,19 +2565,72 @@
                     style={{ aspectRatio: '9/16' }}
                   />
                   
-                  {isPlaying && (
-                    <div className="mt-3 sm:mt-4">
-                      <div className="w-full bg-gray-700 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-100"
-                          style={{ width: `${progress * 100}%` }}
-                        />
+                  {/* Achievement Animation Overlay */}
+                  {showAchievement && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="text-center animate-pulse">
+                        <div className="text-6xl sm:text-8xl mb-4">✨🎉✨</div>
+                        <div className="text-2xl sm:text-4xl font-bold text-white drop-shadow-lg animate-bounce">
+                          Transformation Complete!
+                        </div>
+                        <div className="text-xl sm:text-2xl text-green-400 mt-2">✓</div>
                       </div>
-                      <p className="text-white text-sm mt-2 text-center">
-                        {(progress * 100).toFixed(1)}%
-                      </p>
                     </div>
                   )}
+                  
+                  {/* Remaining Time Progress Indicator - Below Image */}
+                  <div className="mt-4 sm:mt-6 bg-gray-800/50 rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-white text-sm font-medium">Progress</span>
+                      <span className="text-white text-sm font-bold">
+                        {isPlaying ? `Revealing in ${remainingTime.toFixed(1)}s` : 'Ready'}
+                      </span>
+                    </div>
+                    
+                    {/* Progress Bar with Engagement Phases */}
+                    <div className="relative w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+                      {/* Phase indicators */}
+                      {engagementMode && (
+                        <>
+                          <div className="absolute top-0 left-[30%] w-px h-full bg-yellow-500/50 z-10"></div>
+                          <div className="absolute top-0 left-[50%] w-px h-full bg-orange-500/50 z-10"></div>
+                          <div className="absolute top-0 left-[85%] w-px h-full bg-red-500/50 z-10"></div>
+                          <div className="absolute top-0 left-[95%] w-px h-full bg-green-500/50 z-10"></div>
+                        </>
+                      )}
+                      <div
+                        className={`h-4 rounded-full transition-all duration-100 ${
+                          progress < 0.3 ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
+                          progress < 0.5 ? 'bg-gradient-to-r from-blue-500 to-yellow-500' :
+                          progress < 0.85 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                          progress < 0.95 ? 'bg-gradient-to-r from-orange-500 to-red-500' :
+                          'bg-gradient-to-r from-red-500 to-green-500'
+                        }`}
+                        style={{ width: `${progress * 100}%` }}
+                      />
+                    </div>
+                    
+                    {/* Progress Details */}
+                    <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
+                      <span>{(progress * 100).toFixed(1)}%</span>
+                      {engagementMode && (
+                        <span className={`font-medium ${
+                          progress < 0.3 ? 'text-blue-400' :
+                          progress < 0.5 ? 'text-yellow-400' :
+                          progress < 0.85 ? 'text-orange-400' :
+                          progress < 0.95 ? 'text-red-400' :
+                          'text-green-400'
+                        }`}>
+                          {progress < 0.3 ? '🎭 Anticipation' :
+                           progress < 0.5 ? '🔍 Curiosity' :
+                           progress < 0.85 ? '⚡ Building' :
+                           progress < 0.95 ? '😱 Suspense!' :
+                           '🎉 Reveal!'}
+                        </span>
+                      )}
+                      <span>{duration}s total</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1604,7 +2719,57 @@
                   { id: 'morph', label: 'Morph' },
                   { id: 'gridFlip', label: 'Grid Flip' },
                   { id: 'spotlight', label: 'Spotlight' },
-                  { id: 'vortex', label: 'Vortex' }
+                  { id: 'vortex', label: 'Vortex' },
+                  { id: 'spiralIn', label: 'Spiral In' },
+                  { id: 'spiralOut', label: 'Spiral Out' },
+                  { id: 'clockWipe', label: 'Clock Wipe' },
+                  { id: 'heartReveal', label: 'Heart Reveal' },
+                  { id: 'starWipe', label: 'Star Wipe' },
+                  { id: 'blindsVertical', label: 'Blinds Vertical' },
+                  { id: 'crossDissolve', label: 'Cross Dissolve' },
+                  { id: 'noiseDissolve', label: 'Noise Dissolve' },
+                  { id: 'zoomRotate', label: 'Zoom Rotate' },
+                  { id: 'pushLeft', label: 'Push Left' },
+                  { id: 'pushRight', label: 'Push Right' },
+                  { id: 'pushUp', label: 'Push Up' },
+                  { id: 'pushDown', label: 'Push Down' },
+                  { id: 'coverLeft', label: 'Cover Left' },
+                  { id: 'coverRight', label: 'Cover Right' },
+                  { id: 'irisOpen', label: 'Iris Open' },
+                  { id: 'irisClose', label: 'Iris Close' },
+                  { id: 'squeezeHorizontal', label: 'Squeeze H' },
+                  { id: 'squeezeVertical', label: 'Squeeze V' },
+                  { id: 'stretchHorizontal', label: 'Stretch H' },
+                  { id: 'barnDoorsOpen', label: 'Barn Open' },
+                  { id: 'barnDoorsClose', label: 'Barn Close' },
+                  { id: 'mosaic', label: 'Mosaic' },
+                  { id: 'dissolvePixels', label: 'Pixel Dissolve' },
+                  { id: 'glitchBlocks', label: 'Glitch Blocks' },
+                  { id: 'flashWhite', label: 'Flash White' },
+                  { id: 'flashBlack', label: 'Flash Black' },
+                  { id: 'radialBlur', label: 'Radial Blur' },
+                  { id: 'curtainLeft', label: 'Curtain Left' },
+                  { id: 'curtainRight', label: 'Curtain Right' },
+                  { id: 'crossZoom', label: 'Cross Zoom' },
+                  { id: 'dreamy', label: 'Dreamy' },
+                  { id: 'windLeft', label: 'Wind Left' },
+                  { id: 'windRight', label: 'Wind Right' },
+                  { id: 'revealUp', label: 'Reveal Up' },
+                  { id: 'revealDown', label: 'Reveal Down' },
+                  { id: 'cornerReveal', label: 'Corner Reveal' },
+                  { id: 'pinwheel', label: 'Pinwheel' },
+                  { id: 'wedge', label: 'Wedge' },
+                  { id: 'bowTie', label: 'Bow Tie' },
+                  { id: 'zigzagHorizontal', label: 'Zigzag H' },
+                  { id: 'zigzagVertical', label: 'Zigzag V' },
+                  { id: 'wipeDiagonalTL', label: 'Diag TL' },
+                  { id: 'wipeDiagonalBR', label: 'Diag BR' },
+                  { id: 'matrixRain', label: 'Matrix Rain' },
+                  { id: 'scanlines', label: 'Scanlines' },
+                  { id: 'oldFilm', label: 'Old Film' },
+                  { id: 'vhs', label: 'VHS' },
+                  { id: 'thermal', label: 'Thermal' },
+                  { id: 'invertFlash', label: 'Invert Flash' }
                     ].map((effect) => (
                       <button
                         key={effect.id}
@@ -1657,6 +2822,75 @@
                   </div>
                 </div>
 
+                {/* Sound Effects Panel */}
+                <div className="bg-white/10 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl">
+                  <h2 className="text-xl sm:text-2xl font-semibold text-white mb-3 sm:mb-4">🔊 Sound Effects</h2>
+                  
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-white text-sm font-medium">Sound Effects</label>
+                      <button
+                        onClick={() => setSoundEnabled(!soundEnabled)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                          soundEnabled 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-gray-600 text-gray-300'
+                        }`}
+                      >
+                        {soundEnabled ? '🔊 ON' : '🔇 OFF'}
+                      </button>
+                    </div>
+
+                    {soundEnabled && (
+                      <div>
+                        <label className="block text-white text-sm font-medium mb-2">
+                          Volume: {(volume * 100).toFixed(0)}%
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={volume}
+                          onChange={(e) => setVolume(parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Psychological Engagement Panel */}
+                <div className="bg-white/10 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl">
+                  <h2 className="text-xl sm:text-2xl font-semibold text-white mb-3 sm:mb-4">🎭 Engagement Mode</h2>
+                  
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-white text-sm font-medium">Psychological Pacing</label>
+                      <button
+                        onClick={() => setEngagementMode(!engagementMode)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                          engagementMode 
+                            ? 'bg-purple-500 text-white' 
+                            : 'bg-gray-600 text-gray-300'
+                        }`}
+                      >
+                        {engagementMode ? '✨ ON' : '⚡ OFF'}
+                      </button>
+                    </div>
+
+                    {engagementMode && (
+                      <div className="text-xs text-gray-300 bg-gray-800/50 p-3 rounded-lg">
+                        <p className="mb-1"><span className="text-blue-400">🎭 Anticipation</span> (0-30%): Slow buildup</p>
+                        <p className="mb-1"><span className="text-yellow-400">🔍 Curiosity</span> (30-50%): Interest peak</p>
+                        <p className="mb-1"><span className="text-orange-400">⚡ Building</span> (50-85%): Acceleration</p>
+                        <p className="mb-1"><span className="text-red-400">😱 Suspense</span> (85-95%): Dramatic pause</p>
+                        <p><span className="text-green-400">🎉 Reveal</span> (95-100%): Grand finale!</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="bg-white/10 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl">
                   <button
                     onClick={isPlaying ? stopAnimation : playAnimation}
@@ -1671,7 +2905,7 @@
 
             <div className="mt-6 sm:mt-8 text-center text-white/60 text-xs sm:text-sm">
               <p>Canvas Resolution: {CANVAS_WIDTH}×{CANVAS_HEIGHT} (Vertical 9:16)</p>
-              <p className="mt-2">Self-contained React component • No backend required</p>
+              <p className="mt-2">100 Transition Effects • Psychological Engagement • Sound Effects</p>
             </div>
           </div>
         </div>
