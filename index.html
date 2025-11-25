@@ -77,63 +77,74 @@
       // Web Audio API - Sound Effects System
       const initAudioContext = () => {
         if (!audioContextRef.current) {
-          audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          try {
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          } catch (e) {
+            console.warn('Web Audio API not supported:', e);
+            return null;
+          }
         }
         return audioContextRef.current;
       };
 
       const playSound = (type) => {
         if (!soundEnabled) return;
-        const ctx = initAudioContext();
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        gainNode.gain.value = volume * 0.3;
+        try {
+          const ctx = initAudioContext();
+          if (!ctx) return;
+          
+          const oscillator = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          gainNode.gain.value = volume * 0.3;
 
-        switch(type) {
-          case 'swoosh':
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.3);
-            break;
-          case 'impact':
-            oscillator.type = 'square';
-            oscillator.frequency.setValueAtTime(150, ctx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.2);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.2);
-            break;
-          case 'achievement':
-            const frequencies = [523.25, 659.25, 783.99, 1046.50];
-            frequencies.forEach((freq, i) => {
-              const osc = ctx.createOscillator();
-              const gain = ctx.createGain();
-              osc.connect(gain);
-              gain.connect(ctx.destination);
-              osc.type = 'sine';
-              osc.frequency.value = freq;
-              gain.gain.value = volume * 0.2;
-              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5 + i * 0.1);
-              osc.start(ctx.currentTime + i * 0.1);
-              osc.stop(ctx.currentTime + 0.5 + i * 0.1);
-            });
-            break;
-          case 'buildup':
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(100, ctx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.5);
+          switch(type) {
+            case 'swoosh':
+              oscillator.type = 'sine';
+              oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+              oscillator.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+              oscillator.start(ctx.currentTime);
+              oscillator.stop(ctx.currentTime + 0.3);
+              break;
+            case 'impact':
+              oscillator.type = 'square';
+              oscillator.frequency.setValueAtTime(150, ctx.currentTime);
+              oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.2);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+              oscillator.start(ctx.currentTime);
+              oscillator.stop(ctx.currentTime + 0.2);
+              break;
+            case 'achievement':
+              const frequencies = [523.25, 659.25, 783.99, 1046.50];
+              frequencies.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = volume * 0.2;
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5 + i * 0.1);
+                osc.start(ctx.currentTime + i * 0.1);
+                osc.stop(ctx.currentTime + 0.5 + i * 0.1);
+              });
+              break;
+            case 'buildup':
+              oscillator.type = 'sawtooth';
+              oscillator.frequency.setValueAtTime(100, ctx.currentTime);
+              oscillator.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.5);
             gainNode.gain.value = volume * 0.1;
             gainNode.gain.exponentialRampToValueAtTime(volume * 0.3, ctx.currentTime + 0.4);
             gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
             oscillator.start(ctx.currentTime);
             oscillator.stop(ctx.currentTime + 0.5);
             break;
+          }
+        } catch (e) {
+          console.warn('Sound playback failed:', e);
         }
       };
 
